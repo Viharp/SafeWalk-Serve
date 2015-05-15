@@ -1,0 +1,300 @@
+import org.junit.*;
+
+import static org.junit.Assert.*;
+
+import java.io.IOException;
+import java.util.Random;
+
+public class SafeWalkServerTest {
+    private static int port;
+    private static String HOST = "127.0.0.1";
+    private SafeWalkServer s;
+    
+    @Before
+    public void setUp() throws IOException {
+        s = new SafeWalkServer();
+        Thread t = new Thread(s);
+        t.start();
+        port = s.getLocalPort();
+    }
+    
+    @After
+    public void tearDown() throws IOException {
+        if(!s.isClosed()) {
+            Client c = new Client(HOST,port,":SHUTDOWN");
+            Thread t = new Thread(c);
+            t.start();
+        }
+    }
+    
+    @Test(timeout=6000)
+    public void testPortValidity() {
+        String em = "isPortValid() not working correctly";
+        assertEquals(em, false, SafeWalkServer.isPortValid("25"));
+        assertEquals(em, false, SafeWalkServer.isPortValid("abcd"));
+        assertEquals(em, true, SafeWalkServer.isPortValid("2981"));
+        assertEquals(em, false, SafeWalkServer.isPortValid("ab23"));
+        assertEquals(em, false, SafeWalkServer.isPortValid("11"));
+        assertEquals(em, false, SafeWalkServer.isPortValid("122213234"));
+    }
+    
+    @Test(timeout = 6000)
+    public void testReset() throws InterruptedException {
+        
+        Client c1 = new Client(HOST,port,"Al,LWSN,PMU");
+        Thread tc1 = new Thread(c1);
+        tc1.start();
+        Thread.sleep(100);
+        
+        Client c3 = new Client(HOST,port,"Alicia,LWSN,EE");
+        Thread tc3 = new Thread(c3);
+        tc3.start();
+        Thread.sleep(100);
+        
+        Client c2 = new Client(HOST,port,":RESET");
+        Thread tc2 = new Thread(c2);
+        tc2.start();
+        
+        tc1.join();
+        tc2.join();
+        
+        assertEquals("ERROR: connection reset", c1.getResult());
+        assertEquals("ERROR: connection reset", c3.getResult());
+        assertEquals("RESPONSE: success", c2.getResult());
+    }
+    
+    @Test(timeout = 6000)
+    public void testShutdown() throws InterruptedException {
+        
+        Client c1 = new Client(HOST,port,"Al,LWSN,PMU");
+        Thread tc1 = new Thread(c1);
+        tc1.start();
+        Thread.sleep(100);
+        
+        Client c3 = new Client(HOST,port,"Alicia,LWSN,EE");
+        Thread tc3 = new Thread(c3);
+        tc3.start();
+        Thread.sleep(100);
+        
+        Client c2 = new Client(HOST,port,":SHUTDOWN");
+        Thread tc2 = new Thread(c2);
+        tc2.start();
+        
+        tc1.join();
+        tc2.join();
+        tc3.join();
+        
+        assertEquals("ERROR: connection reset", c1.getResult());
+        assertEquals("ERROR: connection reset", c3.getResult());
+        assertEquals("RESPONSE: success", c2.getResult());
+        assertEquals(true,s.isClosed());
+    }
+    @Test(timeout = 6000)
+    public void testPendingRequests() throws InterruptedException {
+        Client c1 = new Client(HOST,port,"Al,LWSN,PMU");
+        Thread tc1 = new Thread(c1);
+        tc1.start();
+        Thread.sleep(100);
+        
+        Client c2 = new Client(HOST,port,"Alicia,LWSN,PUSH");
+        Thread tc2 = new Thread(c2);
+        tc2.start();
+        Thread.sleep(100);
+        
+        Client c3 = new Client(HOST,port,":PENDING_REQUESTS,#,*,*");
+        Thread tc3 = new Thread(c3);
+        tc3.start();
+        
+        Client c4 = new Client(HOST,port,":PENDING_REQUESTS,#,LWSN,*");
+        Thread tc4 = new Thread(c4);
+        tc4.start();
+        
+        Client c5 = new Client(HOST,port,":PENDING_REQUESTS,#,*,PMU");
+        Thread tc5 = new Thread(c5);
+        tc5.start();
+        
+        Client c6 = new Client(HOST,port,":PENDING_REQUESTS,*,*,*");
+        Thread tc6 = new Thread(c6);
+        tc6.start();
+        
+        Client c7 = new Client(HOST,port,":PENDING_REQUESTS,x,*,*");
+        Thread tc7 = new Thread(c7);
+        tc7.start();
+        
+        Client c8 = new Client(HOST,port,":PENDING_REQUESTS,#,#,#");
+        Thread tc8 = new Thread(c8);
+        tc8.start();
+        
+        Client c9 = new Client(HOST,port,":PENDING_REQUESTS,*,#,#");
+        Thread tc9 = new Thread(c9);
+        tc9.start();
+        
+        Client c10 = new Client(HOST,port,":PENDING_REQUESTS,#,xyz,*");
+        Thread tc10 = new Thread(c10);
+        tc10.start();
+        
+        Client c11 = new Client(HOST,port,":PENDING_REQUESTS,#,*,abc");
+        Thread tc11 = new Thread(c11);
+        tc11.start();
+        
+        Client c12 = new Client(HOST,port,":PENDING_REQUESTS,#,LWSN,PUSH");
+        Thread tc12 = new Thread(c12);
+        tc12.start();
+        
+        Client c13 = new Client(HOST,port,":PENDING_REQUESTS,#,EE,EE");
+        Thread tc13 = new Thread(c13);
+        tc13.start();
+        
+        Client c14 = new Client(HOST,port,":PENDING_REQUESTS,x,EE,EE");
+        Thread tc14 = new Thread(c14);
+        tc14.start();
+        
+        Client c15 = new Client(HOST,port,"Alicia,LWSN,PUSH");
+        Thread tc15 = new Thread(c15);
+        tc15.start();
+        
+        Client c16 = new Client(HOST,port,"Alicia,LWSN,PMU");
+        Thread tc16 = new Thread(c16);
+        tc16.start();
+        
+        Client c17 = new Client(HOST,port,":SHUTDOWN");
+        Thread tc17 = new Thread(c17);
+        tc17.start();
+        
+        
+        tc1.join();
+        tc2.join();
+        tc3.join();
+        tc4.join();
+        tc5.join();
+        tc6.join();
+        tc7.join();
+        tc8.join();
+        tc9.join();
+        tc10.join();
+        tc11.join();
+        tc12.join();
+        tc13.join();
+        tc14.join();
+        tc15.join();
+        tc16.join();
+        tc17.join();
+        
+        
+        assertEquals("RESPONSE: # of pending requests = 2", c3.getResult());
+        assertEquals("RESPONSE: # of pending requests from LWSN = 2", c4.getResult());
+        assertEquals("RESPONSE: # of pending requests to PMU = 1", c5.getResult());
+        assertEquals("[[Al, LWSN, PMU], [Alicia, LWSN, PUSH]]", c6.getResult());
+        assertEquals("ERROR: invalid command", c7.getResult());
+        assertEquals("ERROR: invalid command", c8.getResult());
+        assertEquals("ERROR: invalid command", c9.getResult());
+        assertEquals("ERROR: invalid command", c10.getResult());
+        assertEquals("ERROR: invalid command", c11.getResult());
+        assertEquals("ERROR: invalid command", c12.getResult());
+        assertEquals("ERROR: invalid command", c13.getResult());
+        assertEquals("ERROR: invalid command", c14.getResult());
+        assertEquals(true,s.isClosed());
+    }
+    
+    @Test(timeout = 6000)
+    public void testMatchClients() throws InterruptedException {
+        Client c1 = new Client(HOST,port,"one,LWSN,PMU");
+        Thread tc1 = new Thread(c1);
+        tc1.start();
+        Thread.sleep(100);
+        
+        Client c2 = new Client(HOST,port,"two,LWSN,PUSH");
+        Thread tc2 = new Thread(c2);
+        tc2.start();
+        Thread.sleep(100);
+        
+        Client c3 = new Client(HOST,port,"three,LWSN,PUSH");
+        Thread tc3 = new Thread(c3);
+        tc3.start();
+        Thread.sleep(100);
+        
+        Client c4 = new Client(HOST,port,"four,LWSN,*");
+        Thread tc4 = new Thread(c4);
+        tc4.start();
+        Thread.sleep(100);
+        
+        Client c5 = new Client(HOST,port,"five,LWSN,EE");
+        Thread tc5 = new Thread(c5);
+        tc5.start();
+        
+        Client c6 = new Client(HOST,port,"six,LWSN,*");
+        Thread tc6 = new Thread(c6);
+        tc6.start();
+        Thread.sleep(100);
+        
+        Client c7 = new Client(HOST,port,"seven,LWSN,EE");
+        Thread tc7 = new Thread(c7);
+        tc7.start();
+        Thread.sleep(100);
+        
+        Client c8 = new Client(HOST,port,":SHUTDOWN");
+        Thread tc8 = new Thread(c8);
+        tc8.start();
+        Thread.sleep(100);
+        
+        
+        
+        tc1.join();
+        tc2.join();
+        tc3.join();
+        tc4.join();
+        tc5.join();
+        tc6.join();
+        tc7.join();
+        tc7.join();
+        //How to check that c7 is waiting?
+        assertEquals("RESPONSE: three,LWSN,PUSH",c2.getResult());
+        assertEquals("RESPONSE: two,LWSN,PUSH",c3.getResult());
+        assertEquals("RESPONSE: four,LWSN,*",c1.getResult());
+        assertEquals("RESPONSE: one,LWSN,PMU",c4.getResult());
+        assertEquals("RESPONSE: six,LWSN,*",c5.getResult());
+        assertEquals("RESPONSE: five,LWSN,EE",c6.getResult());
+    }
+    
+    @Test(timeout = 6000)
+    public void testvalidRequestsOrCommands() throws InterruptedException {
+        Client c1 = new Client(HOST,port,"one,LWSN,LWSN");
+        Thread tc1 = new Thread(c1);
+        tc1.start();
+        Thread.sleep(100);
+        
+        Client c2 = new Client(HOST,port,"two,*,PUSH");
+        Thread tc2 = new Thread(c2);
+        tc2.start();
+        Thread.sleep(100);
+        Client c3 = new Client(HOST,port,"two,*,*");
+        Thread tc3 = new Thread(c3);
+        tc3.start();
+        Thread.sleep(100);
+        Client c4 = new Client(HOST,port,"two,xyz,*");
+        Thread tc4 = new Thread(c4);
+        tc4.start();
+        Thread.sleep(100);
+        Client c5 = new Client(HOST,port,":hello");
+        Thread tc5 = new Thread(c5);
+        tc5.start();
+        Thread.sleep(100);
+        Client c6 = new Client(HOST,port,":SHUTDOWN");
+        Thread tc6 = new Thread(c6);
+        tc6.start();
+        Thread.sleep(100);
+        
+        tc1.join();
+        tc2.join();
+        tc3.join();
+        tc4.join();
+        tc5.join();
+        tc6.join();
+        
+        assertEquals("ERROR: invalid request",c1.getResult());
+        assertEquals("ERROR: invalid request",c2.getResult());
+        assertEquals("ERROR: invalid request",c3.getResult());
+        assertEquals("ERROR: invalid request",c4.getResult());
+        assertEquals("ERROR: invalid command",c5.getResult());
+    }
+}
